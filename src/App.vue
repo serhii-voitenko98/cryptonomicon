@@ -297,7 +297,7 @@ export default {
       ticker: "",
       tickers: [],
       sel: null,
-      graph: []
+      graph: [],
     };
   },
   methods: {
@@ -347,5 +347,3 @@ export default {
   },
 };
 </script>
-
-<style src="./app.css"></style>
