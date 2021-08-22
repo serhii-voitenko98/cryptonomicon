@@ -85,38 +85,38 @@
         </button>
       </section>
 
-      <hr class="w-full border-t border-gray-600 my-4"/>
+      <template v-if="filteredTickers().length">
+        <hr class="w-full border-t border-gray-600 my-4"/>
 
-      <div>
-        Filter:
-        <input
+        <div>
+          Filter:
+          <input
             type="text"
             name="wallet"
             class="pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
             placeholder=""
             v-model="filter"
             @keydown.enter="add"
-        />
+          />
 
-        <div>
-          <button
+          <div>
+            <button
               class="my-4 mr-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
               v-if="page !== 1"
               @click="page -= 1"
-          >
-            Previous
-          </button>
-          <button
+            >
+              Previous
+            </button>
+            <button
               class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
               v-if="isNextShown"
               @click="page += 1"
-          >
-            Next
-          </button>
+            >
+              Next
+            </button>
+          </div>
         </div>
-      </div>
 
-      <template v-if="tickers.length">
         <hr class="w-full border-t border-gray-600 my-4"/>
 
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -257,6 +257,8 @@ export default {
     handleTickerDeletion(tickerToDelete) {
       this.tickers = this.tickers.filter((t) => t !== tickerToDelete);
       localStorage.setItem("crypto-list", JSON.stringify(this.tickers));
+      this.filter = "";
+      this.page = 1;
     },
     normalizeGraph() {
       const max = Math.max(...this.graph);
@@ -303,13 +305,16 @@ export default {
         );
 
         const data = await f.json();
+        const foundedTicker = this.tickers.find((t) => t.name === tickerName);
 
-        this.tickers.find((t) => t.name === tickerName).price =
+        if (foundedTicker) {
+          foundedTicker.price =
             data["USD"]
-                ? data["USD"] > 1
+              ? data["USD"] > 1
                 ? data["USD"]?.toFixed(2)
                 : data["USD"]?.toPrecision(2)
-                : "-";
+              : "-";
+        }
 
         if (this.sel?.name === tickerName) {
           this.graph.push(data["USD"]);
@@ -318,14 +323,23 @@ export default {
     }
   },
   created() {
-    const data = localStorage.getItem("crypto-list");
+    const localStorageData = localStorage.getItem("crypto-list");
+    const urlData = Object.fromEntries(new URL(window.location).searchParams);
 
-    if (data) {
-      this.tickers = JSON.parse(data);
+    if (localStorageData) {
+      this.tickers = JSON.parse(localStorageData);
 
       this.tickers.forEach(ticker => {
         this.intervalFetch(ticker.name);
       });
+    }
+
+    if (urlData.filter) {
+      this.filter = urlData.filter;
+    }
+
+    if (urlData.page) {
+      this.page = urlData.page;
     }
 
     (async () => {
@@ -342,9 +356,16 @@ export default {
       window.history.pushState(
           null,
           document.title,
-          `${window.location.pathname}?filter=${this.filter}`
+          `${window.location.pathname}?filter=${this.filter}&page=${this.page}`
       );
-    }
+    },
+    page() {
+      window.history.pushState(
+        null,
+        document.title,
+        `${window.location.pathname}?filter=${this.filter}&page=${this.page}`
+      );
+    },
   }
 };
 </script>
