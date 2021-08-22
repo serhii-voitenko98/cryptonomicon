@@ -288,6 +288,7 @@ export default {
     },
     handleTickerDeletion(tickerToDelete) {
       this.tickers = this.tickers.filter((t) => t !== tickerToDelete);
+      localStorage.setItem("crypto-list", JSON.stringify(this.tickers));
     },
     normalizeGraph() {
       const max = Math.max(...this.graph);
