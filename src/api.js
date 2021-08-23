@@ -17,11 +17,16 @@ const socket = new WebSocket(
 const AGGREGATE_INDEX = "5";
 const ERROR_INDEX = "500";
 const INVALID_SUB = "INVALID_SUB";
+const BTC = "BTC";
+const USD = "USD";
+
+let btcToUsd;
 
 socket.addEventListener("message", ({ data }) => {
   const {
     TYPE: type,
-    FROMSYMBOL: currency,
+    FROMSYMBOL: fromSymbol,
+    TOSYMBOL: toSymbol,
     PRICE: newPrice,
     PARAMETER: parameter,
     INFO: info,
@@ -32,11 +37,36 @@ socket.addEventListener("message", ({ data }) => {
     return;
   }
 
+  if (fromSymbol === BTC && toSymbol === USD) {
+    btcToUsd = newPrice;
+  }
+
   if (type === ERROR_INDEX && message === INVALID_SUB) {
     const currencyFromParameter = getCurrencyFromParameter(parameter);
-    invokeHandlers(currencyFromParameter, undefined, info);
+
+    if (currencyFromParameter.currency === USD) {
+      return sendToWebSocket({
+        action: "SubAdd",
+        subs: [`5~CCCAGG~${currencyFromParameter.cryptoCurrency}~BTC`],
+      });
+    }
+
+    invokeHandlers(currencyFromParameter.cryptoCurrency, undefined, info);
   } else {
-    invokeHandlers(currency, newPrice);
+    let price = newPrice;
+
+    if (toSymbol === BTC) {
+      if (btcToUsd === undefined) {
+        return sendToWebSocket({
+          action: "SubAdd",
+          subs: [`5~CCCAGG~BTC~USD`],
+        });
+      }
+
+      price *= btcToUsd;
+    }
+
+    invokeHandlers(fromSymbol, price);
   }
 });
 
@@ -70,6 +100,9 @@ function sendToWebSocket(message) {
 }
 
 function subscribeTockerToWs(ticker) {
+  if (ticker === BTC && btcToUsd !== undefined) {
+    return;
+  }
   sendToWebSocket({
     action: "SubAdd",
     subs: [`5~CCCAGG~${ticker}~USD`],
@@ -79,7 +112,7 @@ function subscribeTockerToWs(ticker) {
 function unsubscribeFromckerToWs(ticker) {
   sendToWebSocket({
     action: "SubRemove",
-    subs: [`5~CCCAGG~${ticker}~USD`],
+    subs: [`5~CCCAGG~${ticker}~USD`, `5~CCCAGG~${ticker}~BTC`],
   });
 }
 
