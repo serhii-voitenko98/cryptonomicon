@@ -301,7 +301,10 @@
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           {{ selectedTicker.name }} - USD
         </h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64">
+        <div
+          class="flex items-end border-gray-600 border-b border-l h-64"
+          ref="graph"
+        >
           <div
             v-for="(bar, idx) of normalizedGraph"
             :key="idx"
@@ -357,6 +360,7 @@ export default {
       filter: "",
       page: 1,
       size: 6,
+      maxGraphElements: 1,
     };
   },
 
@@ -394,13 +398,40 @@ export default {
     loadCoins().then((data) => (this.coinList = data["Data"]));
   },
 
+  mounted() {
+    window.addEventListener("resize", () => {
+      this.calculateMaxGraphElements();
+      this.normalizeGraphSize();
+    });
+  },
+
+  beforeUnmount() {
+    window.removeEventListener("resize", () => {});
+  },
+
   methods: {
+    normalizeGraphSize() {
+      while (this.graph.length > this.maxGraphElements) {
+        this.graph.shift();
+      }
+    },
+
+    calculateMaxGraphElements() {
+      if (!this.$refs.graph) {
+        return;
+      }
+
+      this.maxGraphElements = this.$refs.graph.clientWidth / 38;
+    },
+
     updateTicker(tickerName, price, error) {
       this.tickers
         .filter((t) => t.name === tickerName)
         .forEach((t) => {
           if (!error && t === this.selectedTicker) {
             this.graph.push(t.price);
+
+            this.normalizeGraphSize();
           }
 
           t.price = price;
@@ -542,6 +573,7 @@ export default {
   watch: {
     selectedTicker() {
       this.graph = [];
+      this.$nextTick().then(this.calculateMaxGraphElements);
     },
 
     tickers() {

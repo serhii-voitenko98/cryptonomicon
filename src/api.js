@@ -14,6 +14,7 @@ const socket = new WebSocket(
   `wss://streamer.cryptocompare.com/v2?api_key=${API_KEY}`
 );
 
+<<<<<<< Updated upstream
 const AGGREGATE_INDEX = "5";
 const ERROR_INDEX = "500";
 const INVALID_SUB = "INVALID_SUB";
@@ -69,6 +70,11 @@ socket.addEventListener("message", ({ data }) => {
     invokeHandlers(fromSymbol, price);
   }
 });
+=======
+updateTickersWorker.port.onmessage = function ({ data }) {
+  invokeHandlers(data.currency, data.price, data.error);
+};
+>>>>>>> Stashed changes
 
 function invokeHandlers(
   currency,
