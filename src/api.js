@@ -1,4 +1,5 @@
 //TODO: refactor to use URLSearchParams
+import { getCurrencyFromParameter } from "./utils/get-currency-from-parameter";
 
 export const loadCoins = () =>
   fetch(
@@ -14,22 +15,42 @@ const socket = new WebSocket(
 );
 
 const AGGREGATE_INDEX = "5";
+const ERROR_INDEX = "500";
+const INVALID_SUB = "INVALID_SUB";
 
 socket.addEventListener("message", ({ data }) => {
   const {
     TYPE: type,
     FROMSYMBOL: currency,
     PRICE: newPrice,
+    PARAMETER: parameter,
+    INFO: info,
+    MESSAGE: message,
   } = JSON.parse(data);
 
-  if (type !== AGGREGATE_INDEX || !newPrice) {
+  if ((type !== AGGREGATE_INDEX || !newPrice) && type !== ERROR_INDEX) {
     return;
   }
 
+  if (type === ERROR_INDEX && message === INVALID_SUB) {
+    const currencyFromParameter = getCurrencyFromParameter(parameter);
+    invokeHandlers(currencyFromParameter, undefined, info);
+  } else {
+    invokeHandlers(currency, newPrice);
+  }
+});
+
+function invokeHandlers(
+  currency,
+  newPrice = undefined,
+  errorMessage = undefined
+) {
   const handlers = tickersHandlers.get(currency) ?? [];
 
-  handlers.forEach((fn) => fn(newPrice));
-});
+  handlers.forEach((fn) => {
+    fn(errorMessage, newPrice);
+  });
+}
 
 function sendToWebSocket(message) {
   const stringifiedMessage = JSON.stringify(message);
@@ -66,7 +87,6 @@ export const subscribeToTicker = (ticker, cb) => {
   const subscribers = tickersHandlers.get(ticker) || [];
   tickersHandlers.set(ticker, [...subscribers, cb]);
 
-  console.log(tickersHandlers.get(ticker));
   subscribeTockerToWs(ticker);
 };
 

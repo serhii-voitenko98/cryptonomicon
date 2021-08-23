@@ -226,6 +226,10 @@
 
           <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
             <div
+              v-for="t of paginatedTickers"
+              @click="tickerOnClick(t)"
+              :class="{ 'border-4': selectedTicker === t }"
+              :key="t.name"
               class="
                 bg-white
                 overflow-hidden
@@ -234,12 +238,11 @@
                 border-purple-800 border-solid
                 cursor-pointer
               "
-              v-for="t of paginatedTickers"
-              @click="tickerOnClick(t)"
-              :class="{ 'border-4': selectedTicker === t }"
-              :key="t.name"
             >
-              <div class="px-4 py-5 sm:p-6 text-center">
+              <div
+                class="px-4 py-5 sm:p-6 text-center"
+                :class="{ 'bg-red-100': t.error }"
+              >
                 <dt class="text-sm font-medium text-gray-500 truncate">
                   {{ t.name }} - USD
                 </dt>
@@ -366,9 +369,13 @@ export default {
     if (localStorageData) {
       this.tickers = JSON.parse(localStorageData);
       this.tickers.forEach((ticker) => {
-        subscribeToTicker(ticker.name, (newPrice) =>
-          this.updateTicker(ticker.name, newPrice)
-        );
+        subscribeToTicker(ticker.name, (error, newPrice) => {
+          if (error) {
+            return this.updateTicker(ticker.name, "-", error);
+          }
+
+          this.updateTicker(ticker.name, newPrice, error);
+        });
       });
     }
 
@@ -388,14 +395,16 @@ export default {
   },
 
   methods: {
-    updateTicker(tickerName, price) {
+    updateTicker(tickerName, price, error) {
       this.tickers
         .filter((t) => t.name === tickerName)
         .forEach((t) => {
-          if (t === this.selectedTicker) {
+          if (!error && t === this.selectedTicker) {
             this.graph.push(t.price);
           }
+
           t.price = price;
+          t.error = error;
         });
     },
 
@@ -420,12 +429,20 @@ export default {
       this.tickers = [...this.tickers, currentTicker];
       this.ticker = "";
 
-      subscribeToTicker(currentTicker.name, (newPrice) =>
-        this.updateTicker(currentTicker.name, newPrice)
-      );
+      subscribeToTicker(currentTicker.name, (error, newPrice) => {
+        if (error) {
+          return this.updateTicker(currentTicker.name, "-", error);
+        }
+
+        this.updateTicker(currentTicker.name, newPrice, error);
+      });
     },
 
     tickerOnClick(clickedTicker) {
+      if (clickedTicker.error) {
+        return;
+      }
+
       this.selectedTicker = clickedTicker;
     },
 
