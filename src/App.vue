@@ -389,12 +389,12 @@ export default {
 
   methods: {
     updateTicker(tickerName, price) {
-      console.log("tickerName", tickerName);
-      console.log("price", price);
-
       this.tickers
         .filter((t) => t.name === tickerName)
         .forEach((t) => {
+          if (t === this.selectedTicker) {
+            this.graph.push(t.price);
+          }
           t.price = price;
         });
     },
@@ -451,14 +451,6 @@ export default {
     selectCoin(coin) {
       this.ticker = coin;
       this.add();
-    },
-
-    async updateTickers() {
-      // const exhangeData = await loadTicker(this.tickers.map((t) => t.name));
-      // this.tickers.forEach((ticker) => {
-      //   const price = exhangeData[ticker.name.toUpperCase()];
-      //   ticker.price = price ?? "-";
-      // });
     },
   },
 
