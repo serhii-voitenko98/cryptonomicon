@@ -1,7 +1,7 @@
 <template>
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
     <div
-      style="display: none"
+      v-if="false"
       class="
         fixed
         w-100
@@ -39,248 +39,72 @@
 
     <div class="container">
       <add-ticker
-        @add-ticker="add"
-        @input="getIsTickerExists"
+        @add-ticker="addTicker"
+        @input="defineIsTickerExists"
         :tickerAlreadyExists="isTickerExists"
       />
 
-      <template v-if="tickers.length">
-        <hr class="w-full border-t border-gray-600 my-4" />
+      <tickers-filter @filter-changed="filterChanged" />
 
-        <div>
-          Filter:
-          <input
-            type="text"
-            name="wallet"
-            class="
-              pr-10
-              border-gray-300
-              text-gray-900
-              focus:outline-none focus:ring-gray-500 focus:border-gray-500
-              sm:text-sm
-              rounded-md
-            "
-            placeholder=""
-            v-model="filter"
-            @keydown.enter="add"
-          />
+      <tickers-pagination
+        @page-changed="pageChanged"
+        :isNextShown="isNextShown"
+      />
 
-          <div>
-            <button
-              class="
-                my-4
-                mr-2
-                inline-flex
-                items-center
-                py-2
-                px-4
-                border border-transparent
-                shadow-sm
-                text-sm
-                leading-4
-                font-medium
-                rounded-full
-                text-white
-                bg-gray-600
-                hover:bg-gray-700
-                transition-colors
-                duration-300
-                focus:outline-none
-                focus:ring-2
-                focus:ring-offset-2
-                focus:ring-gray-500
-              "
-              v-if="page != 1"
-              @click="page -= 1"
-            >
-              Previous
-            </button>
+      <tickers-list
+        @remove-ticker="removeTicker"
+        @select-ticker="selectTicker"
+        :tickers="paginatedTickers"
+        :isSelected="!!selectedTicker"
+      />
 
-            <button
-              class="
-                my-4
-                inline-flex
-                items-center
-                py-2
-                px-4
-                border border-transparent
-                shadow-sm
-                text-sm
-                leading-4
-                font-medium
-                rounded-full
-                text-white
-                bg-gray-600
-                hover:bg-gray-700
-                transition-colors
-                duration-300
-                focus:outline-none
-                focus:ring-2
-                focus:ring-offset-2
-                focus:ring-gray-500
-              "
-              v-if="isNextShown"
-              @click="page += 1"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-
-        <template v-if="paginatedTickers.length">
-          <hr class="w-full border-t border-gray-600 my-4" />
-
-          <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
-            <div
-              v-for="t of paginatedTickers"
-              @click="tickerOnClick(t)"
-              :class="{ 'border-4': selectedTicker === t }"
-              :key="t.name"
-              class="
-                bg-white
-                overflow-hidden
-                shadow
-                rounded-lg
-                border-purple-800 border-solid
-                cursor-pointer
-              "
-            >
-              <div
-                class="px-4 py-5 sm:p-6 text-center"
-                :class="{ 'bg-red-100': t.error }"
-              >
-                <dt class="text-sm font-medium text-gray-500 truncate">
-                  {{ t.name }} - USD
-                </dt>
-
-                <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                  {{ formatPrice(t.price) }}
-                </dd>
-              </div>
-
-              <div class="w-full border-t border-gray-200"></div>
-
-              <button
-                @click.stop="handleTickerDeletion(t)"
-                class="
-                  flex
-                  items-center
-                  justify-center
-                  font-medium
-                  w-full
-                  bg-gray-100
-                  px-4
-                  py-4
-                  sm:px-6
-                  text-md text-gray-500
-                  hover:text-gray-600 hover:bg-gray-200 hover:opacity-20
-                  transition-all
-                  focus:outline-none
-                "
-              >
-                <svg
-                  class="h-5 w-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="#718096"
-                  aria-hidden="true"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                    clip-rule="evenodd"
-                  ></path>
-                </svg>
-                Delete
-              </button>
-            </div>
-          </dl>
-
-          <hr
-            v-if="tickers.length"
-            class="w-full border-t border-gray-600 my-4"
-          />
-        </template>
-      </template>
-
-      <section v-if="selectedTicker" class="relative">
-        <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          {{ selectedTicker.name }} - USD
-        </h3>
-        <div
-          class="flex items-end border-gray-600 border-b border-l h-64"
-          ref="graph"
-        >
-          <div
-            v-for="(bar, idx) of normalizedGraph"
-            :key="idx"
-            :style="{ height: `${bar}%` }"
-            class="bg-purple-800 border w-10"
-          ></div>
-        </div>
-        <button
-          @click="selectedTicker = null"
-          type="button"
-          class="absolute top-0 right-0"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            xmlns:xlink="http://www.w3.org/1999/xlink"
-            xmlns:svgjs="http://svgjs.com/svgjs"
-            version="1.1"
-            width="30"
-            height="30"
-            x="0"
-            y="0"
-            viewBox="0 0 511.76 511.76"
-            style="enable-background: new 0 0 512 512"
-            xml:space="preserve"
-          >
-            <g>
-              <path
-                d="M436.896,74.869c-99.84-99.819-262.208-99.819-362.048,0c-99.797,99.819-99.797,262.229,0,362.048    c49.92,49.899,115.477,74.837,181.035,74.837s131.093-24.939,181.013-74.837C536.715,337.099,536.715,174.688,436.896,74.869z     M361.461,331.317c8.341,8.341,8.341,21.824,0,30.165c-4.16,4.16-9.621,6.251-15.083,6.251c-5.461,0-10.923-2.091-15.083-6.251    l-75.413-75.435l-75.392,75.413c-4.181,4.16-9.643,6.251-15.083,6.251c-5.461,0-10.923-2.091-15.083-6.251    c-8.341-8.341-8.341-21.845,0-30.165l75.392-75.413l-75.413-75.413c-8.341-8.341-8.341-21.845,0-30.165    c8.32-8.341,21.824-8.341,30.165,0l75.413,75.413l75.413-75.413c8.341-8.341,21.824-8.341,30.165,0    c8.341,8.32,8.341,21.824,0,30.165l-75.413,75.413L361.461,331.317z"
-                fill="#718096"
-                data-original="#000000"
-              ></path>
-            </g>
-          </svg>
-        </button>
-      </section>
+      <ticker-chart
+        v-if="selectedTicker"
+        @close-chart="selectedTicker = null"
+        :selectedTicker="selectedTicker"
+        :graph="graph"
+      />
     </div>
   </div>
 </template>
 
 <script>
-import { subscribeToTicker, unsubscribeFromTicker } from "./api";
+import TickersList from "./components/TickersList.vue";
+import TickersFilter from "./components/TickersFilter.vue";
+import TickersPagination from "./components/TickersPagination.vue";
 import AddTicker from "./components/AddTicker.vue";
+import TickerChart from "./components/TickerChart.vue";
+
+import { subscribeToTicker, unsubscribeFromTicker } from "./api";
 
 export default {
   name: "App",
 
   components: {
+    TickersList,
     AddTicker,
+    TickersFilter,
+    TickersPagination,
+    TickerChart,
   },
 
   data() {
     return {
       ticker: "",
-      tickers: [],
       selectedTicker: null,
+      isTickerExists: false,
+
+      tickers: [],
       graph: [],
-      coinList: null,
+
       filter: "",
       page: 1,
       size: 6,
-      maxGraphElements: 1,
-      isTickerExists: false,
     };
   },
 
   created() {
     const localStorageData = localStorage.getItem("crypto-list");
-    const urlData = Object.fromEntries(
-      new URL(window.location.href).searchParams
-    );
 
     if (localStorageData) {
       this.tickers = JSON.parse(localStorageData);
@@ -294,64 +118,10 @@ export default {
         });
       });
     }
-
-    if (this.tickers.length) {
-      setInterval(this.updateTickers, 5000);
-    }
-
-    const VALID_KEYS = ["filter", "page"];
-
-    VALID_KEYS.forEach((key) => {
-      if (urlData[key]) {
-        this[key] = urlData[key];
-      }
-    });
-  },
-
-  mounted() {
-    window.addEventListener("resize", () => {
-      this.calculateMaxGraphElements();
-      this.normalizeGraphSize();
-    });
-  },
-
-  beforeUnmount() {
-    window.removeEventListener("resize", () => {});
   },
 
   methods: {
-    normalizeGraphSize() {
-      while (this.graph.length > this.maxGraphElements) {
-        this.graph.shift();
-      }
-    },
-
-    calculateMaxGraphElements() {
-      if (!this.$refs.graph) {
-        return;
-      }
-
-      this.maxGraphElements = this.$refs.graph.clientWidth / 38;
-    },
-
-    updateTicker(tickerName, price, error) {
-      this.tickers
-        .filter((t) => t.name === tickerName)
-        .forEach((t) => {
-          if (!error && t === this.selectedTicker) {
-            this.graph.push(t.price);
-
-            this.normalizeGraphSize();
-          }
-
-          t.price = price;
-          t.error = error;
-        });
-    },
-
-    add(ticker) {
-      this.ticker = ticker;
-
+    addTicker(ticker) {
       const currentTicker = {
         name: ticker,
         price: "-",
@@ -368,25 +138,7 @@ export default {
       });
     },
 
-    formatPrice(price) {
-      if (price === "-") {
-        return price;
-      }
-
-      return price > 1
-        ? Number(price).toFixed(2)
-        : Number(price).toPrecision(2);
-    },
-
-    tickerOnClick(clickedTicker) {
-      if (clickedTicker.error) {
-        return;
-      }
-
-      this.selectedTicker = clickedTicker;
-    },
-
-    handleTickerDeletion(tickerToDelete) {
+    removeTicker(tickerToDelete) {
       this.tickers = this.tickers.filter((t) => t !== tickerToDelete);
 
       this.filter = "";
@@ -401,9 +153,34 @@ export default {
       });
     },
 
-    getIsTickerExists(ticker) {
+    defineIsTickerExists(ticker) {
       this.isTickerExists = !!this.tickers.filter((t) => t.name === ticker)
         .length;
+    },
+
+    updateTicker(tickerName, price, error) {
+      this.tickers
+        .filter((t) => t.name === tickerName)
+        .forEach((t) => {
+          if (!error && t === this.selectedTicker) {
+            this.graph.push(t.price);
+          }
+
+          t.price = price;
+          t.error = error;
+        });
+    },
+
+    selectTicker(ticker) {
+      this.selectedTicker = ticker;
+    },
+
+    filterChanged(value) {
+      this.filter = value;
+    },
+
+    pageChanged(value) {
+      this.page = value;
     },
   },
 
@@ -416,29 +193,18 @@ export default {
       return this.page * this.size;
     },
 
-    filteredTickers() {
-      return this.tickers.filter((t) =>
-        t.name.toLowerCase().includes(this.filter.toLowerCase())
-      );
+    isNextShown() {
+      return this.filteredTickers.length > this.endIndex;
     },
 
     paginatedTickers() {
       return this.filteredTickers.slice(this.startIndex, this.endIndex);
     },
 
-    isNextShown() {
-      return this.filteredTickers.length > this.endIndex;
-    },
-
-    normalizedGraph() {
-      const max = Math.max(...this.graph);
-      const min = Math.min(...this.graph);
-
-      if (max === min) {
-        return this.graph.map(() => 50);
-      }
-
-      return this.graph.map((price) => 5 + ((price - min) * 95) / (max - min));
+    filteredTickers() {
+      return this.tickers.filter((t) =>
+        t.name.toLowerCase().includes(this.filter.toLowerCase())
+      );
     },
 
     pageStateOptions() {
@@ -452,7 +218,6 @@ export default {
   watch: {
     selectedTicker() {
       this.graph = [];
-      this.$nextTick().then(this.calculateMaxGraphElements);
     },
 
     tickers() {
