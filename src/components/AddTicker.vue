@@ -57,12 +57,14 @@
       </div>
     </div>
 
-    <add-button @click="add" class="my-4" />
+    <add-button @click="add" class="my-4">
+      <template #content>Add ticker</template>
+    </add-button>
   </section>
 </template>
 
 <script>
-import AddButton from "./AddButton.vue";
+import AddButton from "./elements/AddButton.vue";
 import { loadCoins } from "../api";
 
 export default {
