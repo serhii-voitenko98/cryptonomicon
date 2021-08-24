@@ -8,7 +8,6 @@ const updateTickersWorker = new SharedWorker("/worker.js");
 const tickersHandlers = new Map();
 
 updateTickersWorker.port.onmessage = function ({ data }) {
-  console.log(data);
   invokeHandlers(data.currency, data.price, data.error);
 };
 
