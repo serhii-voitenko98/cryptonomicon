@@ -41,7 +41,7 @@ export default {
     const { page } = getSearchParams();
 
     if (page) {
-      this.page = page;
+      this.page = Number(page);
     }
   },
 

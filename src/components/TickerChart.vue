@@ -80,8 +80,6 @@ export default {
         (price) => 5 + ((price - min) * 95) / (max - min)
       );
 
-      console.log("normalized", normalized);
-
       this.normalizeGraphSize(normalized);
 
       return normalized;
@@ -100,7 +98,6 @@ export default {
     },
 
     normalizeGraphSize(graph) {
-      console.log("this.maxGraphElements", this.maxGraphElements);
       while (graph.length > this.maxGraphElements) {
         graph.shift();
       }
